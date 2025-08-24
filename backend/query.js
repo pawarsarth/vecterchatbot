@@ -37,7 +37,7 @@ async function transformQuery(question) {
 // ----------------------
 // STEP 2: Chat Function
 // ----------------------
-async function chatting(question) {
+export async function chatting(question) {
   // FIXED: Add await here ✅
   const queries = await transformQuery(question);
 
