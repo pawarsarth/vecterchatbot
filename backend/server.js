@@ -13,9 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ----------------------
-// File Upload Directory
-// ----------------------
+// File upload directory
 const uploadDir = "/tmp/uploads";
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -29,9 +27,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// ----------------------
-// Upload PDF + Index in Pinecone
-// ----------------------
+// Upload + Index PDF
 app.post("/upload", upload.single("pdf"), async (req, res) => {
   try {
     if (!req.file) {
@@ -41,12 +37,10 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
     console.log("Uploaded file:", req.file);
 
     const pdfPath = req.file.path;
-
-    // Index the PDF into Pinecone
     await indexdocument(pdfPath);
 
     res.status(200).json({
-      message: "PDF uploaded and indexed successfully",
+      message: "✅ PDF uploaded and indexed successfully",
       fileName: req.file.originalname,
     });
   } catch (err) {
@@ -55,9 +49,7 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
   }
 });
 
-// ----------------------
 // Ask Question API
-// ----------------------
 app.post("/ask", async (req, res) => {
   try {
     const { question } = req.body;
@@ -77,15 +69,11 @@ app.post("/ask", async (req, res) => {
   }
 });
 
-// ----------------------
-// Health Check Route
-// ----------------------
+// Health Check
 app.get("/", (req, res) => {
   res.send("✅ API is running fine!");
 });
 
-// ----------------------
 // Start Server
-// ----------------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

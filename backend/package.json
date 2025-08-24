@@ -21,7 +21,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^5.1.0",
-    "multer": "^2.0.2",
-    "readline-sync": "^1.4.10"
+    "multer": "^2.0.2"
   }
 }
