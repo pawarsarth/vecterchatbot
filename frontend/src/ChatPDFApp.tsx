@@ -7,6 +7,7 @@ import { Upload, Send, FileText, Sparkles, Bot, User, Zap, Star } from "lucide-r
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
+
 // ----------------------
 // Types
 // ----------------------
