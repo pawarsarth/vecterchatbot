@@ -4,7 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import dotenv from "dotenv";
-import { indexdocument } from "./indexDocument.js";
+import { indexdocument } from "./index.js";
 import { chatting } from "./query.js";
 
 dotenv.config();
