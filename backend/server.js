@@ -13,47 +13,28 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// File upload directory
-app.post("/upload", upload.single("pdf"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+// ----------------------
+// File Upload Directory
+// ----------------------
+const uploadDir = "/tmp/uploads"; // Render requires /tmp
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
-    console.log("Uploaded file:", req.file);
-
-    const pdfPath = req.file.path;
-
-    try {
-      await indexdocument(pdfPath);
-    } catch (err) {
-      console.error("❌ Error during PDF indexing:", err.message);
-      return res.status(500).json({
-        error: "Failed to index PDF",
-        details: err.message,
-      });
-    }
-
-    res.status(200).json({
-      message: "✅ PDF uploaded and indexed successfully",
-      fileName: req.file.originalname,
-    });
-  } catch (err) {
-    console.error("❌ Upload error:", err.message);
-    res.status(500).json({ error: "Upload failed", details: err.message });
-  }
-});
-
-
+// ----------------------
+// Multer Configuration (Define FIRST)
+// ----------------------
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) =>
     cb(null, Date.now() + path.extname(file.originalname)),
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage }); // ✅ Define here BEFORE using
 
-// Upload + Index PDF
+// ----------------------
+// Upload PDF + Index in Pinecone
+// ----------------------
 app.post("/upload", upload.single("pdf"), async (req, res) => {
   try {
     if (!req.file) {
@@ -63,6 +44,8 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
     console.log("Uploaded file:", req.file);
 
     const pdfPath = req.file.path;
+
+    // Index the PDF into Pinecone
     await indexdocument(pdfPath);
 
     res.status(200).json({
@@ -70,12 +53,14 @@ app.post("/upload", upload.single("pdf"), async (req, res) => {
       fileName: req.file.originalname,
     });
   } catch (err) {
-    console.error("Upload error:", err);
+    console.error("Upload error:", err.message);
     res.status(500).json({ error: "Failed to upload or index PDF" });
   }
 });
 
+// ----------------------
 // Ask Question API
+// ----------------------
 app.post("/ask", async (req, res) => {
   try {
     const { question } = req.body;
@@ -90,16 +75,20 @@ app.post("/ask", async (req, res) => {
 
     res.status(200).json({ answer });
   } catch (err) {
-    console.error("Error in /ask:", err);
+    console.error("Error in /ask:", err.message);
     res.status(500).json({ error: "Failed to fetch answer" });
   }
 });
 
-// Health Check
+// ----------------------
+// Health Check Route
+// ----------------------
 app.get("/", (req, res) => {
   res.send("✅ API is running fine!");
 });
 
+// ----------------------
 // Start Server
+// ----------------------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
