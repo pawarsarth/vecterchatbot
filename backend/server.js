@@ -14,10 +14,36 @@ app.use(cors());
 app.use(express.json());
 
 // File upload directory
-const uploadDir = "/tmp/uploads";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+app.post("/upload", upload.single("pdf"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    console.log("Uploaded file:", req.file);
+
+    const pdfPath = req.file.path;
+
+    try {
+      await indexdocument(pdfPath);
+    } catch (err) {
+      console.error("❌ Error during PDF indexing:", err.message);
+      return res.status(500).json({
+        error: "Failed to index PDF",
+        details: err.message,
+      });
+    }
+
+    res.status(200).json({
+      message: "✅ PDF uploaded and indexed successfully",
+      fileName: req.file.originalname,
+    });
+  } catch (err) {
+    console.error("❌ Upload error:", err.message);
+    res.status(500).json({ error: "Upload failed", details: err.message });
+  }
+});
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
