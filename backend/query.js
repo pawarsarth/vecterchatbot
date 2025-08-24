@@ -1,91 +1,108 @@
-import express from "express";
-import cors from "cors";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
-import dotenv from "dotenv";
-import { indexdocument } from "./indexDocument.js";
-import { chatting } from "./query.js";
-
+import * as dotenv from 'dotenv';
 dotenv.config();
+import readlineSync from 'readline-sync';
+import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+import { Pinecone } from '@pinecone-database/pinecone';
+import { GoogleGenAI } from '@google/genai';
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const ai = new GoogleGenAI({});
+const History = [];
 
 // ----------------------
-// File Upload Directory
+// STEP 1: Transform Query
 // ----------------------
-const uploadDir = "/tmp/uploads";
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+async function transformQuery(question) {
+  History.push({
+    role: 'user',
+    parts: [{ text: question }],
+  });
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: History,
+    config: {
+      systemInstruction: `You are a query rewriting expert. 
+      Based on the provided chat history, rephrase the "Follow Up user Question" 
+      into a complete, standalone question that can be understood without the chat history.
+      Only output the rewritten question and nothing else.`,
+    },
+  });
+
+  // Remove temporary query from history
+  History.pop();
+
+  return response.text.trim();
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + path.extname(file.originalname)),
-});
+// ----------------------
+// STEP 2: Chat Function
+// ----------------------
+async function chatting(question) {
+  // FIXED: Add await here ✅
+  const queries = await transformQuery(question);
 
-const upload = multer({ storage });
+  const embeddings = new GoogleGenerativeAIEmbeddings({
+    apiKey: process.env.GEMINI_API_KEY,
+    model: 'text-embedding-004',
+  });
+
+  // Create vector from the rewritten query
+  const queryVector = await embeddings.embedQuery(queries);
+
+  // Pinecone Vector Search
+  const pinecone = new Pinecone();
+  const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX_NAME);
+  const searchResults = await pineconeIndex.query({
+    topK: 10,
+    vector: queryVector,
+    includeMetadata: true,
+  });
+
+  // Build context from Pinecone search
+  const context = searchResults.matches
+    .map((match) => match.metadata.text)
+    .join('\n\n---\n\n');
+
+  // Add user's rewritten query to history
+  History.push({
+    role: 'user',
+    parts: [{ text: queries }],
+  });
+
+  // Generate response from Gemini
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: History,
+    config: {
+      systemInstruction: `You have to behave like a Data Structure and Algorithm Expert.
+      You will be given a context of relevant information and a user question.
+      Your task is to answer the user's question based ONLY on the provided context.
+      If the answer is not in the context, you must say 
+      "I could not find the answer in the provided document."
+      Keep your answers clear, concise, and educational.
+      
+      Context: ${context}`,
+    },
+  });
+
+  // Save model's answer to history
+  History.push({
+    role: 'model',
+    parts: [{ text: response.text }],
+  });
+
+  console.log('\n');
+  console.log(response.text);
+}
 
 // ----------------------
-// Upload PDF + Index in Pinecone
+// STEP 3: Main Loop
 // ----------------------
-app.post("/upload", upload.single("pdf"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    console.log("Uploaded file:", req.file);
-
-    const pdfPath = req.file.path;
-
-    // Index the PDF into Pinecone
-    await indexdocument(pdfPath);
-
-    res.status(200).json({
-      message: "PDF uploaded and indexed successfully",
-      fileName: req.file.originalname,
-    });
-  } catch (err) {
-    console.error("Upload error:", err);
-    res.status(500).json({ error: "Failed to upload or index PDF" });
+async function main() {
+  while (true) {
+    const userProblem = readlineSync.question('Ask me anything --> ');
+    await chatting(userProblem);
   }
-});
+}
 
-// ----------------------
-// Ask Question API
-// ----------------------
-app.post("/ask", async (req, res) => {
-  try {
-    const { question } = req.body;
-
-    if (!question || question.trim() === "") {
-      return res.status(400).json({ error: "Question is required" });
-    }
-
-    console.log("User asked:", question);
-
-    const answer = await chatting(question);
-
-    res.status(200).json({ answer });
-  } catch (err) {
-    console.error("Error in /ask:", err);
-    res.status(500).json({ error: "Failed to fetch answer" });
-  }
-});
-
-// ----------------------
-// Health Check Route
-// ----------------------
-app.get("/", (req, res) => {
-  res.send("✅ API is running fine!");
-});
-
-// ----------------------
-// Start Server
-// ----------------------
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+main();
