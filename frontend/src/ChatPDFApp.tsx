@@ -75,11 +75,12 @@ export default function ChatPDFApp() {
 
     try {
       const formData = new FormData();
-      formData.append("pdf", pdfFile);
+formData.append("pdf", pdfFile);
 
-      await axios.post(`${API_BASE}/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+await axios.post(`${API_BASE}/upload`, formData, {
+  headers: { "Content-Type": "multipart/form-data" },
+});
+
 
       setPdfName(pdfFile.name);
       setMessages((prev) => [
