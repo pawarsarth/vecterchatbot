@@ -114,7 +114,7 @@ await axios.post(`${API_BASE}/upload`, formData, {
     setIsAsking(true);
 
     try {
-      const res = await axios.post(`${API_BASE}/ask`, { question: q });
+      const res = await axios.post(`${API_BASE}/ask`, { question: q }, { withCredentials: true })
       const answer = res.data?.answer || "⚠️ No response received.";
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
     } catch (err: any) {

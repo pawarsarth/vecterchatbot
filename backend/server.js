@@ -9,27 +9,24 @@ import { chatting } from "./query.js";
 
 dotenv.config();
 const app = express();
+const cors = require('cors');
 
 // ✅ Dynamic allowed origins
 const allowedOrigins = [
-  "http://localhost:5173", // Local React Dev
-  process.env.FRONTEND_URL, // Use frontend URL from .env
+  'http://localhost:3000',  // For local development
+  'https://your-frontend-domain.onrender.com'  // Your actual frontend URL
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("❌ CORS Error: Origin not allowed"));
-      }
-    },
-    methods: "GET,POST,PUT,DELETE",
-    allowedHeaders: "Content-Type,Authorization",
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 
 app.use(express.json());
 
