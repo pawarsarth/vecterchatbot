@@ -3,20 +3,21 @@ import axios from "axios";
 
 export default function PdfUploader({ onUploadSuccess }) {
   const [file, setFile] = useState(null);
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
   const handleUpload = async () => {
-    if (!file) return alert("Please select a PDF");
-    const formData = new FormData();
-    formData.append("pdf", file);
+  if (!file) return alert("Please select a PDF");
+  const formData = new FormData();
+  formData.append("pdf", file);
 
-    try {
-      await axios.post("http://localhost:5000/upload", formData);
-      alert("PDF uploaded successfully!");
-      onUploadSuccess();
-    } catch (err) {
-      alert("Failed to upload PDF");
-    }
-  };
+  try {
+    await axios.post(`${API_BASE}/upload`, formData);
+    alert("PDF uploaded successfully!");
+    onUploadSuccess();
+  } catch {
+    alert("Failed to upload PDF");
+  }
+};
 
   return (
     <div className="bg-gray-800 p-4 rounded-lg shadow-md w-full max-w-md mx-auto mb-6">

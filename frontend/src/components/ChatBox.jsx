@@ -4,16 +4,17 @@ import axios from "axios";
 export default function ChatBox() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-  const handleAsk = async () => {
-    if (!question.trim()) return;
-    try {
-      const res = await axios.post("http://localhost:5000/ask", { question });
-      setAnswer(res.data.answer);
-    } catch (err) {
-      setAnswer("Error fetching answer");
-    }
-  };
+const handleAsk = async () => {
+  if (!question.trim()) return;
+  try {
+    const res = await axios.post(`${API_BASE}/ask`, { question });
+    setAnswer(res.data.answer);
+  } catch {
+    setAnswer("Error fetching answer");
+  }
+};
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-2xl mx-auto">

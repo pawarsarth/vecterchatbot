@@ -41,4 +41,3 @@ export async function indexdocument(pdfPath) {
     throw new Error("Failed to process PDF: " + err.message);
   }
 }
-

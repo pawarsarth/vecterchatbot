@@ -8,87 +8,97 @@ import { indexdocument } from "./index.js";
 import { chatting } from "./query.js";
 
 dotenv.config();
-
 const app = express();
-app.use(cors());
+
+// ✅ Dynamic allowed origins
+const allowedOrigins = [
+  "http://localhost:5173", // Local React Dev
+  process.env.FRONTEND_URL, // Use frontend URL from .env
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("❌ CORS Error: Origin not allowed"));
+      }
+    },
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type,Authorization",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
-// ----------------------
-// File Upload Directory
-// ----------------------
-const uploadDir = "/tmp/uploads"; // Render requires /tmp
+// ✅ Ensure uploads folder exists
+const uploadDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+  fs.mkdirSync(uploadDir);
 }
 
-// ----------------------
-// Multer Configuration (Define FIRST)
-// ----------------------
+// ✅ Multer storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) =>
     cb(null, Date.now() + path.extname(file.originalname)),
 });
+const upload = multer({ storage });
 
-const upload = multer({ storage }); // ✅ Define here BEFORE using
-
-// ----------------------
-// Upload PDF + Index in Pinecone
-// ----------------------
+// ✅ Upload PDF and index it
 app.post("/upload", upload.single("pdf"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      return res.status(400).json({ error: "❌ No file uploaded" });
     }
 
-    console.log("Uploaded file:", req.file);
-
     const pdfPath = req.file.path;
-
-    // Index the PDF into Pinecone
     await indexdocument(pdfPath);
 
-    res.status(200).json({
-      message: "✅ PDF uploaded and indexed successfully",
+    return res.status(200).json({
+      message: "✅ PDF uploaded & indexed successfully",
       fileName: req.file.originalname,
+      filePath: pdfPath,
     });
   } catch (err) {
-    console.error("Upload error:", err.message);
-    res.status(500).json({ error: "Failed to upload or index PDF" });
+    console.error("❌ Upload Error:", err);
+    return res.status(500).json({ error: "Failed to upload or index PDF" });
   }
 });
 
-// ----------------------
-// Ask Question API
-// ----------------------
+// ✅ Ask question from indexed PDF
 app.post("/ask", async (req, res) => {
   try {
     const { question } = req.body;
 
-    if (!question || question.trim() === "") {
+    if (!question) {
       return res.status(400).json({ error: "Question is required" });
     }
 
-    console.log("User asked:", question);
+    console.log("📩 Received Question:", question);
 
     const answer = await chatting(question);
 
-    res.status(200).json({ answer });
+    if (!answer) {
+      throw new Error("No response from chatting()");
+    }
+
+    res.json({ answer });
   } catch (err) {
-    console.error("Error in /ask:", err.message);
-    res.status(500).json({ error: "Failed to fetch answer" });
+    console.error("❌ /ask Route Error:", err.message);
+    res.status(500).json({ error: "Failed to fetch answer", details: err.message });
   }
 });
 
-// ----------------------
-// Health Check Route
-// ----------------------
+// ✅ Health check endpoint
 app.get("/", (req, res) => {
-  res.send("✅ API is running fine!");
+  res.send("🚀 API is running successfully!");
 });
 
-// ----------------------
-// Start Server
-// ----------------------
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});
