@@ -12,7 +12,10 @@ const chatHistory = [];
 async function transformQuery(question) {
   const model = genAI.getGenerativeModel({
     model: "gemini-2.0-flash",
-    systemInstruction: "You are a query rewriting expert. Rephrase the user's follow-up question into a standalone, context-independent question. Only return the rewritten question."
+    systemInstruction: `You are a query rewriting expert. 
+      Based on the provided chat history, rephrase the "Follow Up user Question" 
+      into a complete, standalone question that can be understood without the chat history.
+      Only output the rewritten question and nothing else.`
   });
 
   const result = await model.generateContent(question);
