@@ -9,7 +9,7 @@ import { chatting } from "./query.js";
 
 dotenv.config();
 const app = express();
-const cors = require('cors');
+
 
 // ✅ Dynamic allowed origins
 const allowedOrigins = [
