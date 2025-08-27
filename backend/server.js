@@ -13,17 +13,20 @@ const app = express();
 
 // ✅ Dynamic allowed origins
 const allowedOrigins = [
-  'http://localhost:3000',  // For local development
-  'https://your-frontend-domain.onrender.com'  // Your actual frontend URL
+  'http://localhost:3000',
+  'https://pdf-ai-frontend-4gqx.onrender.com'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
     }
+    return callback(null, true);
   },
   credentials: true
 }));

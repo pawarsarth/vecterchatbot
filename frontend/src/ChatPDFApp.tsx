@@ -5,7 +5,8 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Upload, Send, FileText, Sparkles, Bot, User, Zap, Star } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+// In your frontend code, ensure you're using the correct backend URL
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://vecterchatbot.onrender.com";
 
 
 // ----------------------
